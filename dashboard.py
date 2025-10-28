@@ -1,14 +1,14 @@
 #---------------------------------------------------------------------
-# PASSO 1: INSTALAÇÃO (Execute no terminal antes de rodar)
-# pip install streamlit plotly
+# PASSO 1: INSTALAÇÃO (Se ainda não fez)
+# python -m pip install streamlit plotly
 #
-# PASSO 2: EXECUTAR (Execute no terminal para iniciar)
-# streamlit run dashboard.py
+# PASSO 2: EXECUTAR (Use este comando no terminal do VS Code)
+# python -m streamlit run dashboard.py
 #---------------------------------------------------------------------
 
 import streamlit as st
 import plotly.graph_objects as go
-
+import locale
 
 # --- DADOS PROCESSADOS (Embutidos para este script funcionar) ---
 # (Estes dados foram extraídos da sua planilha)
@@ -34,19 +34,40 @@ st.set_page_config(layout="wide", page_title="Dashboard Bunker")
 
 # --- FUNÇÕES AUXILIARES DE FORMATAÇÃO ---
 def format_reais(valor):
-  def format_reais(valor):
-    """Formata um número como moeda BRL (sem locale)."""
-    # Este formato é universal e não falha no servidor
-    return f"R$ {valor:,.2f}"
+    """Formata um número como moeda BRL."""
+    try:
+        # Tenta usar o locale pt_BR. Pode falhar em alguns sistemas.
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+        return locale.currency(valor, grouping=True, symbol='R$')
+    except Exception:
+        # Fallback universal se o locale pt_BR não estiver instalado
+        # Formata com vírgula como separador de milhar e ponto decimal
+        return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def format_numero(valor, casas_decimais=0):
     """Formata um número com separador de milhar."""
-    return f"{valor:,.{casas_decimais}f}"
+    formatted_str = f"{valor:,.{casas_decimais}f}"
+    # Fallback para trocar os separadores caso o locale falhe
+    return formatted_str.replace(",", "X").replace(".", ",").replace("X", ".")
+
 
 # --- CSS CUSTOMIZADO (Minimalista e Executivo) ---
-# (Isso oculta o menu "Made with Streamlit" e ajusta o padding)
 st.markdown("""
 <style>
+    :root {
+        --cor-fundo: #f4f7fa;
+        --cor-card: #ffffff;
+        --cor-texto-principal: #2c3e50;
+        --cor-texto-secundario: #5a7184;
+        --cor-azul-kpi: #1a237e;
+        --cor-verde-kpi: #1e8449;
+        --cor-azul-longo: #0056b3;
+        --borda-raio: 10px;
+        --sombra-card: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -56,14 +77,21 @@ st.markdown("""
         padding-left: 3rem;
         padding-right: 3rem;
     }
+    /* Estilo dos cards de KPI */
     .stMetric {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 10px;
+        background-color: var(--cor-card);
+        border: 1px solid #eaf0f6;
+        border-radius: var(--borda-raio);
         padding: 15px 20px;
+        box-shadow: var(--sombra-card);
     }
+    /* Cor do título (label) do KPI */
     .stMetric .css-1xarl3l, .stMetric .css-1xarl3l {
-        color: #5a7184; /* Cor do título (label) */
+        color: var(--cor-texto-secundario); 
+    }
+    /* Cor do valor principal do KPI */
+    .stMetric .css-1dp5vir, .stMetric .css-1l4w6pd {
+        color: var(--cor-azul-kpi);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -73,12 +101,23 @@ st.markdown("""
 am_concluido = data_am['concluido']
 pa_concluido = data_pa['concluido']
 
-total_valor = am_concluido['LONGO CURSO']['valor'] + am_concluido['CABOTAGEM']['valor'] + \
-              pa_concluido['LONGO CURSO']['valor'] + pa_concluido['CABOTAGEM']['valor']
+# Calcula o valor total de operações concluídas (AM + PA)
+total_valor = (
+    am_concluido['LONGO CURSO']['valor'] + 
+    am_concluido['CABOTAGEM']['valor'] +
+    pa_concluido['LONGO CURSO']['valor'] + 
+    pa_concluido['CABOTAGEM']['valor']
+)
               
-total_volume = am_concluido['LONGO CURSO']['volume'] + am_concluido['CABOTAGEM']['volume'] + \
-               pa_concluido['LONGO CURSO']['volume'] + pa_concluido['CABOTAGEM']['volume']
+# Calcula o volume total de operações concluídas (AM + PA)
+total_volume = (
+    am_concluido['LONGO CURSO']['volume'] + 
+    am_concluido['CABOTAGEM']['volume'] +
+    pa_concluido['LONGO CURSO']['volume'] + 
+    pa_concluido['CABOTAGEM']['volume']
+)
 
+# Calcula o total de processos (todas as linhas)
 total_processos = data_am['total_linhas'] + data_pa['total_linhas']
 
 
@@ -92,6 +131,7 @@ st.header("Visão Geral Consolidada (AM + PA)")
 
 cols_kpi = st.columns(3)
 with cols_kpi[0]:
+    # Este é o KPI que você mencionou ter sumido
     st.metric(
         label="Valor Total (Operações Concluídas)", 
         value=format_reais(total_valor)
@@ -111,7 +151,7 @@ st.divider()
 
 # --- 2. ANÁLISE REGIONAL (Lado a Lado) ---
 st.header("Análise Regional Detalhada")
-col_am, col_pa = st.columns(2)
+col_am, col_pa = st.columns(2, gap="large") # Adiciona um gap maior
 
 # --- COLUNA AMAZONAS (AM) ---
 with col_am:
