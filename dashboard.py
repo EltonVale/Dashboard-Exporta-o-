@@ -8,7 +8,7 @@
 
 import streamlit as st
 import plotly.graph_objects as go
-import locale
+
 
 # --- DADOS PROCESSADOS (Embutidos para este script funcionar) ---
 # (Estes dados foram extraídos da sua planilha)
@@ -34,14 +34,10 @@ st.set_page_config(layout="wide", page_title="Dashboard Bunker")
 
 # --- FUNÇÕES AUXILIARES DE FORMATAÇÃO ---
 def format_reais(valor):
-    """Formata um número como moeda BRL."""
-    try:
-        # Define o locale para o padrão brasileiro para formatação
-        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-        return locale.currency(valor, grouping=True, symbol='R$')
-    except:
-        # Fallback caso o locale pt_BR não esteja instalado no sistema
-        return f"R$ {valor:,.2f}"
+  def format_reais(valor):
+    """Formata um número como moeda BRL (sem locale)."""
+    # Este formato é universal e não falha no servidor
+    return f"R$ {valor:,.2f}"
 
 def format_numero(valor, casas_decimais=0):
     """Formata um número com separador de milhar."""
